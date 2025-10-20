@@ -49,23 +49,21 @@ def process_election_data(df, year):
         else: start_col, end_col = 'Osman_Zorba_(KSP)', 'Ersin_Tatar_(BAĞ_6)'
         
         if start_col not in df.columns or end_col not in df.columns:
-            st.error(f"{year} yılı verilerinde aday sütunları bulunamadı. Lütfen CSV sütun isimlerini kontrol edin.")
             return None, []
             
         start_idx, end_idx = df.columns.get_loc(start_col), df.columns.get_loc(end_col)
         candidate_columns = df.columns[start_idx : end_idx + 1]
         candidate_votes = df[candidate_columns].sum().sort_values(ascending=False)
         return candidate_votes, candidate_columns
-    except KeyError as e:
-        st.error(f"{year} yılı verilerinde sütun hatası: {e} sütunu bulunamadı.")
+    except KeyError:
         return None, []
 
 # --- Kenar Çubuğu Filtreleri ---
 st.sidebar.header("Filtreler")
-selected_year = st.sidebar.radio("Yıl Seçimi", ('2020', '2025', 'Karşılaştırma'))
+selected_year = st.sidebar.radio("Görünüm Seçimi", ('2020', '2025', 'Genel Karşılaştırma', 'Tatar vs. Erhürman'))
 
 if df_2020 is not None and df_2025 is not None:
-    if selected_year == 'Karşılaştırma':
+    if selected_year in ['Genel Karşılaştırma', 'Tatar vs. Erhürman']:
         regions = sorted(list(set(df_2020['Region'].unique()) | set(df_2025['Region'].unique())))
     else:
         active_df = df_2020 if selected_year == '2020' else df_2025
@@ -76,7 +74,7 @@ if df_2020 is not None and df_2025 is not None:
     temp_df_2020 = df_2020[df_2020['Region'] == selected_region] if selected_region != "Tümü" else df_2020
     temp_df_2025 = df_2025[df_2025['Region'] == selected_region] if selected_region != "Tümü" else df_2025
 
-    if selected_year == 'Karşılaştırma':
+    if selected_year in ['Genel Karşılaştırma', 'Tatar vs. Erhürman']:
         districts = sorted(list(set(temp_df_2020['Secim_Cevresi'].unique()) | set(temp_df_2025['Secim_Cevresi'].unique())))
     else:
         active_temp_df = temp_df_2020 if selected_year == '2020' else temp_df_2025
@@ -87,7 +85,7 @@ if df_2020 is not None and df_2025 is not None:
         temp_df_2020 = temp_df_2020[temp_df_2020['Secim_Cevresi'] == selected_district]
         temp_df_2025 = temp_df_2025[temp_df_2025['Secim_Cevresi'] == selected_district]
 
-    if selected_year == 'Karşılaştırma':
+    if selected_year in ['Genel Karşılaştırma', 'Tatar vs. Erhürman']:
         ballot_boxes = sorted([int(x) for x in set(temp_df_2020['Sandik_No'].unique()) | set(temp_df_2025['Sandik_No'].unique())])
     else:
         active_temp_df = temp_df_2020 if selected_year == '2020' else temp_df_2025
@@ -120,7 +118,6 @@ def get_title(year_str, region, district, ballot_box):
 
 def display_year_results(df, candidate_votes, year_str, header_title):
     st.header(header_title)
-    
     if df.empty or candidate_votes is None or candidate_votes.empty:
         st.warning(f"{year_str} yılı için seçilen kriterlerde veri bulunamadı.")
         return
@@ -137,33 +134,17 @@ def display_year_results(df, candidate_votes, year_str, header_title):
 
     st.subheader("İlk Üç Aday")
     cols = st.columns(3)
-    
-    # --- DÜZELTME: Her adayın bilgisi kendi sütununa yerleştirildi ---
     for i in range(3):
         if len(candidate_votes) > i:
-            label = ["Birinci 🥇", "İkinci 🥈", "Üçüncü 🥉"][i]
-            candidate_name = candidate_votes.index[i].replace('_', ' ')
-            vote_count = candidate_votes.iloc[i]
-            vote_percentage = (vote_count / total_valid_votes) * 100 if total_valid_votes > 0 else 0
-            
-            # 'with' bloğu kullanarak tüm metrikleri doğru sütuna yerleştir
             with cols[i]:
-                st.metric(
-                    label=label,
-                    value=candidate_name,
-                )
-                st.metric(
-                    label="Oy Sayısı",
-                    value=f"{int(vote_count):,}",
-                )
-                st.metric(
-                    label="Oy Oranı",
-                    value=f"{vote_percentage:.2f}%",
-                )
-
+                label = ["Birinci 🥇", "İkinci 🥈", "Üçüncü 🥉"][i]
+                candidate_name = candidate_votes.index[i].replace('_', ' ')
+                vote_count = candidate_votes.iloc[i]
+                vote_percentage = (vote_count / total_valid_votes) * 100 if total_valid_votes > 0 else 0
+                st.metric(label=label, value=candidate_name)
+                st.metric(label="Oy Sayısı", value=f"{int(vote_count):,}")
+                st.metric(label="Oy Oranı", value=f"{vote_percentage:.2f}%")
     st.markdown("---")
-
-    # Görselleştirmeler
     col1, col2 = st.columns(2)
     with col1:
         st.subheader("Adayların Oy Sayıları")
@@ -174,14 +155,54 @@ def display_year_results(df, candidate_votes, year_str, header_title):
         st.subheader("Oy Dağılımı")
         if total_valid_votes > 0:
             pie_df = candidate_votes.reset_index(); pie_df.columns = ['Aday', 'Oy_Sayısı']
-            fig_pie = px.pie(
-                pie_df, values='Oy_Sayısı', names='Aday',
-                title=f"Toplam Geçerli Oy: {int(total_valid_votes):,}", hole=0.3
-            )
+            fig_pie = px.pie(pie_df, values='Oy_Sayısı', names='Aday', title=f"Toplam Geçerli Oy: {int(total_valid_votes):,}", hole=0.3)
             fig_pie.update_traces(textposition='inside', textinfo='percent+label', pull=[0.1 if i==0 else 0 for i in range(len(pie_df))])
             st.plotly_chart(fig_pie, use_container_width=True)
-        else:
-            st.warning("Bu seçimde geçerli oy bulunmamaktadır.")
+        else: st.warning("Bu seçimde geçerli oy bulunmamaktadır.")
+
+def display_head_to_head(votes_2020, votes_2025, title):
+    st.header(title)
+    if (votes_2020 is None or votes_2020.empty) and (votes_2025 is None or votes_2025.empty):
+        st.warning("Bu karşılaştırma için veri bulunamadı.")
+        return
+
+    # --- DÜZELTME: Ortak Y ekseni aralığını hesapla ---
+    tatar_2020 = votes_2020.get('Ersin_Tatar', 0) if votes_2020 is not None else 0
+    erhurman_2020 = votes_2020.get('Tufan_Erhürman', 0) if votes_2020 is not None else 0
+    tatar_2025 = votes_2025.get('Ersin_Tatar_(BAĞ_6)', 0) if votes_2025 is not None else 0
+    erhurman_2025 = votes_2025.get('Tufan_Erhürman_(CTP)', 0) if votes_2025 is not None else 0
+
+    max_vote = max(tatar_2020, erhurman_2020, tatar_2025, erhurman_2025)
+    yaxis_range_max = max_vote * 1.15  # Üstte biraz boşluk bırakmak için
+
+    col1, col2 = st.columns(2)
+    with col1:
+        st.subheader("2020 Karşılaştırması")
+        if votes_2020 is not None and not votes_2020.empty:
+            fark = tatar_2020 - erhurman_2020
+            kazanan = "Ersin Tatar" if fark > 0 else "Tufan Erhürman" if fark < 0 else "Berabere"
+            st.metric("Ersin Tatar'ın Oyu", f"{int(tatar_2020):,}")
+            st.metric("Tufan Erhürman'ın Oyu", f"{int(erhurman_2020):,}")
+            st.metric("Önde Olan Aday", kazanan, delta=f"{int(fark):,} Oy Fark")
+            
+            h2h_df = pd.DataFrame({'Aday': ['Ersin Tatar', 'Tufan Erhürman'], 'Oy': [tatar_2020, erhurman_2020]})
+            fig = px.bar(h2h_df, x='Aday', y='Oy', title="2020 İkili Yarış", range_y=[0, yaxis_range_max])
+            st.plotly_chart(fig, use_container_width=True)
+        else: st.warning("2020 yılı için veri bulunamadı.")
+    
+    with col2:
+        st.subheader("2025 Karşılaştırması")
+        if votes_2025 is not None and not votes_2025.empty:
+            fark = tatar_2025 - erhurman_2025
+            kazanan = "Ersin Tatar" if fark > 0 else "Tufan Erhürman" if fark < 0 else "Berabere"
+            st.metric("Ersin Tatar'ın Oyu", f"{int(tatar_2025):,}")
+            st.metric("Tufan Erhürman'ın Oyu", f"{int(erhurman_2025):,}")
+            st.metric("Önde Olan Aday", kazanan, delta=f"{int(fark):,} Oy Fark")
+
+            h2h_df = pd.DataFrame({'Aday': ['Ersin Tatar', 'Tufan Erhürman'], 'Oy': [tatar_2025, erhurman_2025]})
+            fig = px.bar(h2h_df, x='Aday', y='Oy', title="2025 İkili Yarış", range_y=[0, yaxis_range_max])
+            st.plotly_chart(fig, use_container_width=True)
+        else: st.warning("2025 yılı için veri bulunamadı.")
 
 # --- Ana uygulama mantığı ---
 if 'selected_region' in locals():
@@ -191,14 +212,14 @@ if 'selected_region' in locals():
     elif selected_year == '2025':
         title = get_title("2025 Sonuçları", selected_region, selected_district, selected_ballot_box)
         display_year_results(filtered_df_2025, candidate_votes_2025_filtered, "2025", title)
-    elif selected_year == 'Karşılaştırma':
-        title = get_title("Karşılaştırmalı Sonuçlar", selected_region, selected_district, selected_ballot_box)
+    elif selected_year == 'Genel Karşılaştırma':
+        title = get_title("Genel Karşılaştırmalı Sonuçlar", selected_region, selected_district, selected_ballot_box)
         st.header(title)
-        
         col1, col2 = st.columns(2)
-        with col1:
-            display_year_results(filtered_df_2020, candidate_votes_2020_filtered, "2020", "2020 Yılı")
-        with col2:
-            display_year_results(filtered_df_2025, candidate_votes_2025_filtered, "2025", "2025 Yılı")
+        with col1: display_year_results(filtered_df_2020, candidate_votes_2020_filtered, "2020", "2020 Yılı")
+        with col2: display_year_results(filtered_df_2025, candidate_votes_2025_filtered, "2025", "2025 Yılı")
+    elif selected_year == 'Tatar vs. Erhürman':
+        title = get_title("Tatar vs. Erhürman Analizi", selected_region, selected_district, selected_ballot_box)
+        display_head_to_head(candidate_votes_2020_filtered, candidate_votes_2025_filtered, title)
 else:
     st.warning("Veri yüklenemedi. Lütfen CSV dosyalarını kontrol edip sayfayı yenileyin.")
