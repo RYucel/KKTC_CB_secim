@@ -4,7 +4,6 @@ import plotly.express as px
 
 # --- 1. SAYFA KONFİGÜRASYONU VE SEO ---
 st.set_page_config(
-    # Bu, tarayıcı sekmesinde ve Google arama sonuçlarında görünen başlık olacaktır.
     page_title="KKTC Seçim Sonuçları: 2020 & 2025 Analizi",
     page_icon="🗳️",
     layout="wide"
@@ -14,21 +13,24 @@ def inject_custom_html():
     """
     Bu fonksiyon, SEO ve sosyal medya paylaşım kartları için gerekli
     olan özel HTML meta etiketlerini sayfanın <head> bölümüne ekler.
+    Kullanıcıya görünmemesi için gizli bir div içine yerleştirilmiştir.
     """
     st.markdown(
         """
-        <head>
-            <!-- SEO Meta Etiketleri -->
-            <meta name="description" content="KKTC 2020 ve 2025 Cumhurbaşkanlığı seçim sonuçlarını karşılaştırın. Ersin Tatar, Tufan Erhürman ve diğer adayların oy değişimlerini ve cephe analizlerini interaktif olarak inceleyin.">
-            <meta name="keywords" content="KKTC, seçim, seçim sonuçları, Ersin Tatar, Tufan Erhürman, Mustafa Akıncı, 2020 seçim, 2025 seçim, cumhurbaşkanlığı, siyaset, analiz">
-            
-            <!-- Open Graph Meta Etiketleri (Facebook, LinkedIn, vb. için paylaşım kartları) -->
-            <meta property="og:title" content="KKTC Seçim Sonuçları: 2020 & 2025 Karşılaştırmalı Analiz">
-            <meta property="og:description" content="İnteraktif panel ile KKTC seçim verilerini keşfedin. Aday ve blok bazında karşılaştırmalar yapın.">
-            <meta property="og:image" content="https://imgur.com/a/Zm1q9N1>  <!-- ÖNEMLİ: Buraya kendi resminizin URL'sini koyun -->
-            <meta property="og:url" content="https://kktc-cb-secim-2020vs2025.streamlit.app"> <!-- ÖNEMLİ: Streamlit Cloud URL'nizi buraya koyun -->
-            <meta property="og:type" content="website">
-        </head>
+        <div style="display: none;">
+            <head>
+                <!-- SEO Meta Etiketleri -->
+                <meta name="description" content="KKTC 2020 ve 2025 Cumhurbaşkanlığı seçim sonuçlarını karşılaştırın. Ersin Tatar, Tufan Erhürman ve diğer adayların oy değişimlerini ve cephe analizlerini interaktif olarak inceleyin.">
+                <meta name="keywords" content="KKTC, seçim, seçim sonuçları, Ersin Tatar, Tufan Erhürman, Mustafa Akıncı, 2020 seçim, 2025 seçim, cumhurbaşkanlığı, siyaset, analiz">
+                
+                <!-- Open Graph Meta Etiketleri (Facebook, LinkedIn, vb. için paylaşım kartları) -->
+                <meta property="og:title" content="KKTC Seçim Sonuçları: 2020 & 2025 Karşılaştırmalı Analiz">
+                <meta property="og:description" content="İnteraktif panel ile KKTC seçim verilerini keşfedin. Aday ve blok bazında karşılaştırmalar yapın.">
+                <meta property="og:image" content="https://i.imgur.com/your_image.png">  <!-- ÖNEMLİ: Buraya .png veya .jpg ile biten DOĞRUDAN resim URL'sini koyun -->
+                <meta property="og:url" content="https://kktc-cb-secim-2020vs2025.streamlit.app"> <!-- ÖNEMLİ: Streamlit Cloud URL'nizi buraya koyun -->
+                <meta property="og:type" content="website">
+            </head>
+        </div>
         """,
         unsafe_allow_html=True,
     )
@@ -122,7 +124,6 @@ if df_2020 is not None and df_2025 is not None:
 
 # --- Ana Panel ---
 st.title("🇹🇷 KKTC Cumhurbaşkanlığı Seçim Sonuçları Paneli")
-# 2. ÖZEL HTML'İ BURADA ÇAĞIRIYORUZ
 inject_custom_html()
 
 def get_title(year_str, region, district, ballot_box):
