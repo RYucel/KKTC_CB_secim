@@ -2,17 +2,40 @@ import streamlit as st
 import pandas as pd
 import plotly.express as px
 
-# --- Sayfa Konfigürasyonu ---
+# --- 1. SAYFA KONFİGÜRASYONU VE SEO ---
 st.set_page_config(
-    page_title="KKTC Seçim Sonuçları Paneli",
+    # Bu, tarayıcı sekmesinde ve Google arama sonuçlarında görünen başlık olacaktır.
+    page_title="KKTC Seçim Sonuçları: 2020 & 2025 Analizi",
     page_icon="🗳️",
     layout="wide"
 )
 
-# --- Veri Yükleme ve Önbelleğe Alma ---
+def inject_custom_html():
+    """
+    Bu fonksiyon, SEO ve sosyal medya paylaşım kartları için gerekli
+    olan özel HTML meta etiketlerini sayfanın <head> bölümüne ekler.
+    """
+    st.markdown(
+        """
+        <head>
+            <!-- SEO Meta Etiketleri -->
+            <meta name="description" content="KKTC 2020 ve 2025 Cumhurbaşkanlığı seçim sonuçlarını karşılaştırın. Ersin Tatar, Tufan Erhürman ve diğer adayların oy değişimlerini ve cephe analizlerini interaktif olarak inceleyin.">
+            <meta name="keywords" content="KKTC, seçim, seçim sonuçları, Ersin Tatar, Tufan Erhürman, Mustafa Akıncı, 2020 seçim, 2025 seçim, cumhurbaşkanlığı, siyaset, analiz">
+            
+            <!-- Open Graph Meta Etiketleri (Facebook, LinkedIn, vb. için paylaşım kartları) -->
+            <meta property="og:title" content="KKTC Seçim Sonuçları: 2020 & 2025 Karşılaştırmalı Analiz">
+            <meta property="og:description" content="İnteraktif panel ile KKTC seçim verilerini keşfedin. Aday ve blok bazında karşılaştırmalar yapın.">
+            <meta property="og:image" content="https://imgur.com/a/Zm1q9N1>  <!-- ÖNEMLİ: Buraya kendi resminizin URL'sini koyun -->
+            <meta property="og:url" content="https://kktc-cb-secim-2020vs2025.streamlit.app/"> <!-- ÖNEMLİ: Streamlit Cloud URL'nizi buraya koyun -->
+            <meta property="og:type" content="website">
+        </head>
+        """,
+        unsafe_allow_html=True,
+    )
+
+# --- Veri Yükleme ve Diğer Fonksiyonlar ---
 @st.cache_data
 def load_data(file_path):
-    """CSV dosyasından seçim verilerini yükler, temizler ve standartlaştırır."""
     try:
         df = pd.read_csv(file_path, on_bad_lines='warn')
         df.rename(columns=lambda c: c.strip('\ufeff'), inplace=True)
@@ -21,14 +44,11 @@ def load_data(file_path):
         df.columns = [col.strip().replace(' ', '_') for col in df.columns]
 
         for col in ['Region', 'Secim_Cevresi']:
-            if col in df.columns:
-                df[col] = df[col].astype(str)
+            if col in df.columns: df[col] = df[col].astype(str)
 
         df.dropna(subset=['Region', 'Secim_Cevresi'], inplace=True)
-        
         numeric_cols = df.columns.drop(['Region', 'Secim_Cevresi', 'Sandik_No'], errors='ignore')
-        for col in numeric_cols:
-            df[col] = pd.to_numeric(df[col], errors='coerce')
+        for col in numeric_cols: df[col] = pd.to_numeric(df[col], errors='coerce')
         df.fillna(0, inplace=True)
         return df
     except FileNotFoundError:
@@ -38,7 +58,6 @@ def load_data(file_path):
         st.error(f"{file_path} yüklenirken bir hata oluştu: {e}")
         return None
 
-# Verileri Yükle
 df_2020 = load_data('TumSandiklar2020.csv')
 df_2025 = load_data('TumSandiklar2025.csv')
 
@@ -47,16 +66,11 @@ def process_election_data(df, year):
     try:
         if year == 2020: start_col, end_col = 'Ersin_Tatar', 'Serdar_Denktaş'
         else: start_col, end_col = 'Osman_Zorba_(KSP)', 'Ersin_Tatar_(BAĞ_6)'
-        
-        if start_col not in df.columns or end_col not in df.columns:
-            return None, []
-            
+        if start_col not in df.columns or end_col not in df.columns: return None, []
         start_idx, end_idx = df.columns.get_loc(start_col), df.columns.get_loc(end_col)
         candidate_columns = df.columns[start_idx : end_idx + 1]
-        candidate_votes = df[candidate_columns].sum().sort_values(ascending=False)
-        return candidate_votes, candidate_columns
-    except KeyError:
-        return None, []
+        return df[candidate_columns].sum().sort_values(ascending=False), candidate_columns
+    except KeyError: return None, []
 
 # --- Kenar Çubuğu Filtreleri ---
 st.sidebar.header("Filtreler")
@@ -108,6 +122,8 @@ if df_2020 is not None and df_2025 is not None:
 
 # --- Ana Panel ---
 st.title("🇹🇷 KKTC Cumhurbaşkanlığı Seçim Sonuçları Paneli")
+# 2. ÖZEL HTML'İ BURADA ÇAĞIRIYORUZ
+inject_custom_html()
 
 def get_title(year_str, region, district, ballot_box):
     title_parts = [year_str]
@@ -221,8 +237,6 @@ def display_bloc_comparison(votes_2020, votes_2025, title):
         st.metric("Sol/Merkez Blok Oyu", f"{int(sol_merkez_2020):,}", help="Tufan Erhürman + Mustafa Akıncı")
         st.metric("Sağ/Merkez Blok Oyu", f"{int(sag_merkez_2020):,}", help="Ersin Tatar")
         st.metric("Önde Olan Blok", kazanan, delta=f"{int(fark):,} Oy Fark")
-        
-        # DÜZELTME: Renkler eklendi
         bloc_df = pd.DataFrame({'Cephe': ['Sol/Merkez Blok', 'Sağ/Merkez Blok'], 'Oy': [sol_merkez_2020, sag_merkez_2020]})
         fig = px.bar(bloc_df, x='Cephe', y='Oy', title="2020 Blok Oy Dağılımı", range_y=[0, yaxis_range_max], color='Cephe', color_discrete_map={'Sol/Merkez Blok': '#1f77b4', 'Sağ/Merkez Blok': '#d62728'})
         st.plotly_chart(fig, use_container_width=True)
@@ -234,8 +248,6 @@ def display_bloc_comparison(votes_2020, votes_2025, title):
         st.metric("Sol/Merkez Blok Oyu", f"{int(sol_merkez_2025):,}", help="Tufan Erhürman")
         st.metric("Sağ/Merkez Blok Oyu", f"{int(sag_merkez_2025):,}", help="Ersin Tatar")
         st.metric("Önde Olan Blok", kazanan, delta=f"{int(fark):,} Oy Fark")
-        
-        # DÜZELTME: Renkler eklendi
         bloc_df = pd.DataFrame({'Cephe': ['Sol/Merkez Blok', 'Sağ/Merkez Blok'], 'Oy': [sol_merkez_2025, sag_merkez_2025]})
         fig = px.bar(bloc_df, x='Cephe', y='Oy', title="2025 Blok Oy Dağılımı", range_y=[0, yaxis_range_max], color='Cephe', color_discrete_map={'Sol/Merkez Blok': '#1f77b4', 'Sağ/Merkez Blok': '#d62728'})
         st.plotly_chart(fig, use_container_width=True)
