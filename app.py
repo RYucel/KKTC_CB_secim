@@ -60,10 +60,10 @@ def process_election_data(df, year):
 
 # --- Kenar Çubuğu Filtreleri ---
 st.sidebar.header("Filtreler")
-selected_year = st.sidebar.radio("Görünüm Seçimi", ('2020', '2025', 'Genel Karşılaştırma', 'Tatar vs. Erhürman'))
+selected_year = st.sidebar.radio("Görünüm Seçimi", ('2020', '2025', 'Genel Karşılaştırma', 'Tatar vs. Erhürman', 'Cephe Karşılaştırması'))
 
 if df_2020 is not None and df_2025 is not None:
-    if selected_year in ['Genel Karşılaştırma', 'Tatar vs. Erhürman']:
+    if selected_year in ['Genel Karşılaştırma', 'Tatar vs. Erhürman', 'Cephe Karşılaştırması']:
         regions = sorted(list(set(df_2020['Region'].unique()) | set(df_2025['Region'].unique())))
     else:
         active_df = df_2020 if selected_year == '2020' else df_2025
@@ -74,7 +74,7 @@ if df_2020 is not None and df_2025 is not None:
     temp_df_2020 = df_2020[df_2020['Region'] == selected_region] if selected_region != "Tümü" else df_2020
     temp_df_2025 = df_2025[df_2025['Region'] == selected_region] if selected_region != "Tümü" else df_2025
 
-    if selected_year in ['Genel Karşılaştırma', 'Tatar vs. Erhürman']:
+    if selected_year in ['Genel Karşılaştırma', 'Tatar vs. Erhürman', 'Cephe Karşılaştırması']:
         districts = sorted(list(set(temp_df_2020['Secim_Cevresi'].unique()) | set(temp_df_2025['Secim_Cevresi'].unique())))
     else:
         active_temp_df = temp_df_2020 if selected_year == '2020' else temp_df_2025
@@ -85,7 +85,7 @@ if df_2020 is not None and df_2025 is not None:
         temp_df_2020 = temp_df_2020[temp_df_2020['Secim_Cevresi'] == selected_district]
         temp_df_2025 = temp_df_2025[temp_df_2025['Secim_Cevresi'] == selected_district]
 
-    if selected_year in ['Genel Karşılaştırma', 'Tatar vs. Erhürman']:
+    if selected_year in ['Genel Karşılaştırma', 'Tatar vs. Erhürman', 'Cephe Karşılaştırması']:
         ballot_boxes = sorted([int(x) for x in set(temp_df_2020['Sandik_No'].unique()) | set(temp_df_2025['Sandik_No'].unique())])
     else:
         active_temp_df = temp_df_2020 if selected_year == '2020' else temp_df_2025
@@ -166,14 +166,12 @@ def display_head_to_head(votes_2020, votes_2025, title):
         st.warning("Bu karşılaştırma için veri bulunamadı.")
         return
 
-    # --- DÜZELTME: Ortak Y ekseni aralığını hesapla ---
     tatar_2020 = votes_2020.get('Ersin_Tatar', 0) if votes_2020 is not None else 0
     erhurman_2020 = votes_2020.get('Tufan_Erhürman', 0) if votes_2020 is not None else 0
     tatar_2025 = votes_2025.get('Ersin_Tatar_(BAĞ_6)', 0) if votes_2025 is not None else 0
     erhurman_2025 = votes_2025.get('Tufan_Erhürman_(CTP)', 0) if votes_2025 is not None else 0
-
     max_vote = max(tatar_2020, erhurman_2020, tatar_2025, erhurman_2025)
-    yaxis_range_max = max_vote * 1.15  # Üstte biraz boşluk bırakmak için
+    yaxis_range_max = max_vote * 1.15
 
     col1, col2 = st.columns(2)
     with col1:
@@ -184,7 +182,6 @@ def display_head_to_head(votes_2020, votes_2025, title):
             st.metric("Ersin Tatar'ın Oyu", f"{int(tatar_2020):,}")
             st.metric("Tufan Erhürman'ın Oyu", f"{int(erhurman_2020):,}")
             st.metric("Önde Olan Aday", kazanan, delta=f"{int(fark):,} Oy Fark")
-            
             h2h_df = pd.DataFrame({'Aday': ['Ersin Tatar', 'Tufan Erhürman'], 'Oy': [tatar_2020, erhurman_2020]})
             fig = px.bar(h2h_df, x='Aday', y='Oy', title="2020 İkili Yarış", range_y=[0, yaxis_range_max])
             st.plotly_chart(fig, use_container_width=True)
@@ -198,11 +195,50 @@ def display_head_to_head(votes_2020, votes_2025, title):
             st.metric("Ersin Tatar'ın Oyu", f"{int(tatar_2025):,}")
             st.metric("Tufan Erhürman'ın Oyu", f"{int(erhurman_2025):,}")
             st.metric("Önde Olan Aday", kazanan, delta=f"{int(fark):,} Oy Fark")
-
             h2h_df = pd.DataFrame({'Aday': ['Ersin Tatar', 'Tufan Erhürman'], 'Oy': [tatar_2025, erhurman_2025]})
             fig = px.bar(h2h_df, x='Aday', y='Oy', title="2025 İkili Yarış", range_y=[0, yaxis_range_max])
             st.plotly_chart(fig, use_container_width=True)
         else: st.warning("2025 yılı için veri bulunamadı.")
+
+def display_bloc_comparison(votes_2020, votes_2025, title):
+    st.header(title)
+    if (votes_2020 is None or votes_2020.empty) and (votes_2025 is None or votes_2025.empty):
+        st.warning("Bu karşılaştırma için veri bulunamadı.")
+        return
+
+    sol_merkez_2020 = (votes_2020.get('Tufan_Erhürman', 0) + votes_2020.get('Mustafa_Akıncı', 0)) if votes_2020 is not None else 0
+    sag_merkez_2020 = votes_2020.get('Ersin_Tatar', 0) if votes_2020 is not None else 0
+    sol_merkez_2025 = votes_2025.get('Tufan_Erhürman_(CTP)', 0) if votes_2025 is not None else 0
+    sag_merkez_2025 = votes_2025.get('Ersin_Tatar_(BAĞ_6)', 0) if votes_2025 is not None else 0
+    max_vote = max(sol_merkez_2020, sag_merkez_2020, sol_merkez_2025, sag_merkez_2025)
+    yaxis_range_max = max_vote * 1.15
+
+    col1, col2 = st.columns(2)
+    with col1:
+        st.subheader("2020 Cephe Analizi")
+        fark = sol_merkez_2020 - sag_merkez_2020
+        kazanan = "Sol/Merkez Blok" if fark > 0 else "Sağ/Merkez Blok" if fark < 0 else "Berabere"
+        st.metric("Sol/Merkez Blok Oyu", f"{int(sol_merkez_2020):,}", help="Tufan Erhürman + Mustafa Akıncı")
+        st.metric("Sağ/Merkez Blok Oyu", f"{int(sag_merkez_2020):,}", help="Ersin Tatar")
+        st.metric("Önde Olan Blok", kazanan, delta=f"{int(fark):,} Oy Fark")
+        
+        # DÜZELTME: Renkler eklendi
+        bloc_df = pd.DataFrame({'Cephe': ['Sol/Merkez Blok', 'Sağ/Merkez Blok'], 'Oy': [sol_merkez_2020, sag_merkez_2020]})
+        fig = px.bar(bloc_df, x='Cephe', y='Oy', title="2020 Blok Oy Dağılımı", range_y=[0, yaxis_range_max], color='Cephe', color_discrete_map={'Sol/Merkez Blok': '#1f77b4', 'Sağ/Merkez Blok': '#d62728'})
+        st.plotly_chart(fig, use_container_width=True)
+
+    with col2:
+        st.subheader("2025 Cephe Analizi")
+        fark = sol_merkez_2025 - sag_merkez_2025
+        kazanan = "Sol/Merkez Blok" if fark > 0 else "Sağ/Merkez Blok" if fark < 0 else "Berabere"
+        st.metric("Sol/Merkez Blok Oyu", f"{int(sol_merkez_2025):,}", help="Tufan Erhürman")
+        st.metric("Sağ/Merkez Blok Oyu", f"{int(sag_merkez_2025):,}", help="Ersin Tatar")
+        st.metric("Önde Olan Blok", kazanan, delta=f"{int(fark):,} Oy Fark")
+        
+        # DÜZELTME: Renkler eklendi
+        bloc_df = pd.DataFrame({'Cephe': ['Sol/Merkez Blok', 'Sağ/Merkez Blok'], 'Oy': [sol_merkez_2025, sag_merkez_2025]})
+        fig = px.bar(bloc_df, x='Cephe', y='Oy', title="2025 Blok Oy Dağılımı", range_y=[0, yaxis_range_max], color='Cephe', color_discrete_map={'Sol/Merkez Blok': '#1f77b4', 'Sağ/Merkez Blok': '#d62728'})
+        st.plotly_chart(fig, use_container_width=True)
 
 # --- Ana uygulama mantığı ---
 if 'selected_region' in locals():
@@ -221,5 +257,8 @@ if 'selected_region' in locals():
     elif selected_year == 'Tatar vs. Erhürman':
         title = get_title("Tatar vs. Erhürman Analizi", selected_region, selected_district, selected_ballot_box)
         display_head_to_head(candidate_votes_2020_filtered, candidate_votes_2025_filtered, title)
+    elif selected_year == 'Cephe Karşılaştırması':
+        title = get_title("Cephe Karşılaştırması", selected_region, selected_district, selected_ballot_box)
+        display_bloc_comparison(candidate_votes_2020_filtered, candidate_votes_2025_filtered, title)
 else:
     st.warning("Veri yüklenemedi. Lütfen CSV dosyalarını kontrol edip sayfayı yenileyin.")
