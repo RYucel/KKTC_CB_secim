@@ -26,7 +26,7 @@ def inject_custom_html():
             <meta property="og:title" content="KKTC Seçim Sonuçları: 2020 & 2025 Karşılaştırmalı Analiz">
             <meta property="og:description" content="İnteraktif panel ile KKTC seçim verilerini keşfedin. Aday ve blok bazında karşılaştırmalar yapın.">
             <meta property="og:image" content="https://imgur.com/a/Zm1q9N1>  <!-- ÖNEMLİ: Buraya kendi resminizin URL'sini koyun -->
-            <meta property="og:url" content="https://kktc-cb-secim-2020vs2025.streamlit.app/"> <!-- ÖNEMLİ: Streamlit Cloud URL'nizi buraya koyun -->
+            <meta property="og:url" content="https://kktc-cb-secim-2020vs2025.streamlit.app"> <!-- ÖNEMLİ: Streamlit Cloud URL'nizi buraya koyun -->
             <meta property="og:type" content="website">
         </head>
         """,
